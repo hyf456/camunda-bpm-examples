@@ -20,8 +20,11 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.junit.Assert.assertThat;
 
+import org.camunda.bpm.engine.RepositoryService;
 import org.camunda.bpm.engine.RuntimeService;
 import org.camunda.bpm.engine.TaskService;
+import org.camunda.bpm.engine.repository.Deployment;
+import org.camunda.bpm.engine.repository.DeploymentBuilder;
 import org.camunda.bpm.engine.task.Task;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -35,9 +38,10 @@ public class CamundaSpringBootExampleApplicationTest {
 
   @Autowired
   private RuntimeService runtimeService;
-
   @Autowired
   private TaskService taskService;
+	@Autowired
+	private RepositoryService repositoryService;
 
 	@Test
 	public void verifyProcessInstanceStarted() {
@@ -49,6 +53,19 @@ public class CamundaSpringBootExampleApplicationTest {
 	  taskService.complete(task.getId());
 
 	  assertThat(runtimeService.createProcessInstanceQuery().count(), is(0L));
+	}
+
+	/**
+	 * 发布流程
+	 */
+	@Test
+	public void deploymentProcessesZip() {
+		Deployment deployment = repositoryService.createDeployment()
+				.name("贷款请求")
+				.addClasspathResource("processes/loanRequest.bpmn")
+				.deploy();
+		System.out.println("部署id:" + deployment.getId());
+		System.out.println("部署名称:" + deployment.getName());
 	}
 
 }
