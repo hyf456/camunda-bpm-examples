@@ -10,13 +10,13 @@
     <module>bpmn-model-api/generate-process-fluent-api</module>
     <module>bpmn-model-api/generate-jsf-form</module>
     <module>bpmn-model-api/parse-bpmn</module>
-    <module>cockpit/cockpit-sample-plugin</module>
-    <module>cockpit/cockpit-failed-jobs-plugin</module>
+<!--    <module>cockpit/cockpit-sample-plugin</module>-->
+<!--    <module>cockpit/cockpit-failed-jobs-plugin</module>-->
     <module>cycle/camunda-cycle-connector-example</module>
-    <module>deployment/spring-servlet-pa-jboss</module>
+<!--    <module>deployment/spring-servlet-pa-jboss</module>-->
     <module>deployment/spring-servlet-pa-tomcat</module>
     <module>deployment/servlet-pa</module>
-    <module>deployment/spring-jboss-non-pa</module>
+<!--    <module>deployment/spring-jboss-non-pa</module>-->
     <module>deployment/embedded-spring-rest</module>
     <module>deployment/ejb-pa</module>
     <module>deployment/spring-boot</module>
