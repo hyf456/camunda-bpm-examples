@@ -101,7 +101,7 @@ public class ParallelTest {
 	//
 	// 	FlowNode flowNode = (FlowNode) process.getFlowElement("_3");
 	//
-	// 	String s = managementService.executeCommand(new DeleteTaskCommand(task.getId()));
+	// 	String s = managementService. (new DeleteTaskCommand(task.getId()));
 	//
 	// 	managementService.executeCommand(new JumpCommand(flowNode,s));
 	//

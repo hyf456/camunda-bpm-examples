@@ -2,41 +2,39 @@ package org.camunda.bpm.example;
 
 import com.han.camunda.bpm.example.CamundaSpringBootExampleHanApplication;
 import org.camunda.bpm.engine.HistoryService;
-import org.camunda.bpm.engine.IdentityService;
-import org.camunda.bpm.engine.ProcessEngine;
 import org.camunda.bpm.engine.RepositoryService;
 import org.camunda.bpm.engine.RuntimeService;
 import org.camunda.bpm.engine.TaskService;
-import org.camunda.bpm.engine.history.HistoricActivityInstance;
 import org.camunda.bpm.engine.history.HistoricTaskInstance;
 import org.camunda.bpm.engine.impl.RepositoryServiceImpl;
-import org.camunda.bpm.engine.impl.identity.Authentication;
 import org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity;
 import org.camunda.bpm.engine.impl.persistence.entity.ProcessDefinitionEntity;
 import org.camunda.bpm.engine.impl.pvm.PvmTransition;
 import org.camunda.bpm.engine.impl.pvm.process.ActivityImpl;
-import org.camunda.bpm.engine.impl.pvm.process.ProcessDefinitionImpl;
 import org.camunda.bpm.engine.impl.pvm.process.TransitionImpl;
 import org.camunda.bpm.engine.repository.Deployment;
-import org.camunda.bpm.engine.runtime.Execution;
 import org.camunda.bpm.engine.runtime.ProcessInstance;
 import org.camunda.bpm.engine.task.Task;
 import org.camunda.bpm.engine.variable.impl.VariableMapImpl;
-import org.camunda.bpm.model.bpmn.instance.FlowNode;
-import org.camunda.bpm.model.bpmn.instance.SequenceFlow;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
- * @Description 信号边界事件
+ * @Description 流程撤回
+ * 1、获取当前任务所在的节点
+ * 2、获取所在节点的流出方向
+ * 3、记录所在节点的流出方向，并将所在节点的流出方向清空
+ * 4、获取目标节点
+ * 5、创建新的方向
+ * 6、将新的方向set到所在节点的流出方向
+ * 7、完成当前任务
+ * 8、还原所在节点的流出方向
  * @Date 2020/9/16 16:26
  * @Author hanyf
  */
@@ -52,37 +50,41 @@ public class WithdrawTest {
 	private TaskService taskService;
 	@Resource
 	private HistoryService historyService;
+
 	/**
 	 * 部署流程,测试撤回
 	 */
 	@Test
-	public void repositoryDeploy(){
+	public void repositoryDeploy() {
 		Deployment deploy = repositoryService.createDeployment()
 				.addClasspathResource("processes/withdraw.bpmn")
 				.name("测试撤回-1")
 				.deploy();
-		System.out.println("部署ID:"+deploy.getId());
-		System.out.println("部署名称"+deploy.getName());
+		System.out.println("部署ID:" + deploy.getId());
+		System.out.println("部署名称" + deploy.getName());
 	}
 
 	/**
 	 * 发布流程
 	 */
 	@Test
-	public void runtimeRelease(){
+	public void runtimeRelease() {
 
 		ProcessInstance pi = runtimeService.startProcessInstanceByKey("withdraw");
-		System.out.println("流程实例ID:"+pi.getId());
-		System.out.println("流程定义ID:"+pi.getProcessDefinitionId());
+		System.out.println("流程实例ID:" + pi.getId());
+		System.out.println("流程定义ID:" + pi.getProcessDefinitionId());
 	}
 
 	/**
 	 * 查询及完成任务
 	 */
 	@Test
-	public void taskQueryComplete(){
+	public void taskQueryComplete() {
 		List<Task> list = taskService.createTaskQuery()
+				// .processInstanceBusinessKey("withdraw")
 				.taskAssignee("zhangsan")
+				// .taskAssignee("lisi")
+				// .taskAssignee("zhaowu")
 				.list();
 		for (Task task : list) {
 			System.out.println("--------------------------------------------");
@@ -91,40 +93,63 @@ public class WithdrawTest {
 			System.out.println("任务创建时间:" + task.getCreateTime());
 			System.out.println("任务委派人:" + task.getAssignee());
 			System.out.println("流程实例ID:" + task.getProcessInstanceId());
-			System.out.println("流程实例ID:" + task.getTaskDefinitionKey());
+			System.out.println("任务定义Key:" + task.getTaskDefinitionKey());
 			System.out.println("--------------------------------------------");
-			taskService.complete(task.getId());
+			// taskService.complete(task.getId());
 		}
 	}
 
+	/**
+	 * 查询已完成的任务
+	 */
 	@Test
-	public void test(){
-		rollBackToAssignWoekFlow("10811","_3");
+	public void taskQuerySuccess() {
+		List<HistoricTaskInstance> list = historyService.createHistoricTaskInstanceQuery()
+				.executionId("10811")
+				// .taskDeleteReason("completed")
+				.list();
+		for (HistoricTaskInstance historicTaskInstance : list) {
+			System.out.println("taskKey:" + historicTaskInstance.getTaskDefinitionKey());
+			System.out.println(historicTaskInstance);
+		}
+
+	}
+
+	@Test
+	public void test() {
+		rollBackToAssignWorkFlow("15311", "_3");
 	}
 
 	/**
 	 * 撤回
+	 *  * 1、获取当前任务所在的节点
+	 *  * 2、获取所在节点的流出方向
+	 *  * 3、记录所在节点的流出方向，并将所在节点的流出方向清空
+	 *  * 4、获取目标节点
+	 *  * 5、创建新的方向
+	 *  * 6、将新的方向set到所在节点的流出方向
+	 *  * 7、完成当前任务
+	 *  * 8、还原所在节点的流出方向
 	 * @param processInstanceId
-	 * @param destTaskkey
+	 * @param destTaskKey
 	 */
-	public void rollBackToAssignWoekFlow(String processInstanceId,String destTaskkey){
+	public void rollBackToAssignWorkFlow(String processInstanceId, String destTaskKey) {
 		// 取得当前任务.当前任务节点
-		destTaskkey ="_3";
 		// HistoricTaskInstance currTask = historyService.createHistoricTaskInstanceQuery().taskId(taskId).singleResult();
 		VariableMapImpl variables;
 		ExecutionEntity entity = (ExecutionEntity) runtimeService.createExecutionQuery().executionId(processInstanceId).singleResult();
-		ProcessDefinitionEntity definition = (ProcessDefinitionEntity)((RepositoryServiceImpl)repositoryService)
+		ProcessDefinitionEntity definition = (ProcessDefinitionEntity) ((RepositoryServiceImpl) repositoryService)
 				.getDeployedProcessDefinition(entity.getProcessDefinitionId());
 		variables = entity.getVariables();
 		//当前活动环节
 		ActivityImpl currActivityImpl = definition.findActivity(entity.getActivityId());
 		//目标活动节点
-		ActivityImpl nextActivityImpl = definition.findActivity(destTaskkey);
-		if(currActivityImpl !=null){
-			//所有的出口集合
+		ActivityImpl nextActivityImpl = definition.findActivity(destTaskKey);
+		if (currActivityImpl != null) {
+			//所有的出口集合 获取所在节点的流出方向
 			List<PvmTransition> pvmTransitions = currActivityImpl.getOutgoingTransitions();
 			List<PvmTransition> oriPvmTransitions = new ArrayList<PvmTransition>();
-			for(PvmTransition transition : pvmTransitions){
+			for (PvmTransition transition : pvmTransitions) {
 				oriPvmTransitions.add(transition);
 			}
 			//清除所有出口
@@ -134,16 +159,18 @@ public class WithdrawTest {
 			TransitionImpl tImpl = currActivityImpl.createOutgoingTransition();
 			tImpl.setDestination(nextActivityImpl);
 			transitionImpls.add(tImpl);
-			List<Task> list = taskService.createTaskQuery().processInstanceId(entity.getProcessInstanceId())
+			List<Task> list = taskService
+					.createTaskQuery()
+					.processInstanceId(entity.getProcessInstanceId())
 					.taskDefinitionKey(entity.getActivityId()).list();
-			for(Task task:list){
+			for (Task task : list) {
 				taskService.complete(task.getId(), variables);
 				historyService.deleteHistoricTaskInstance(task.getId());
 			}
-			for(TransitionImpl transitionImpl:transitionImpls){
+			for (TransitionImpl transitionImpl : transitionImpls) {
 				currActivityImpl.getOutgoingTransitions().remove(transitionImpl);
 			}
-			for(PvmTransition pvmTransition:oriPvmTransitions){
+			for (PvmTransition pvmTransition : oriPvmTransitions) {
 				pvmTransitions.add(pvmTransition);
 			}
 		}

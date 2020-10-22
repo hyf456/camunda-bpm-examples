@@ -4,10 +4,12 @@
     <startEvent id="_2" name="开始"/>
     <userTask activiti:assignee="zhangsan" activiti:exclusive="true" id="_3" name="原始任务A"/>
     <userTask activiti:assignee="lisi" activiti:exclusive="true" id="_4" name="原始任务B"/>
-    <endEvent id="_5" name="结束"/>
-    <sequenceFlow id="_6" sourceRef="_2" targetRef="_3"/>
-    <sequenceFlow id="_7" sourceRef="_3" targetRef="_4"/>
-    <sequenceFlow id="_8" sourceRef="_4" targetRef="_5"/>
+    <userTask activiti:assignee="zhaowu" activiti:exclusive="true" id="_5" name="原始任务C"/>
+    <endEvent id="_6" name="结束"/>
+    <sequenceFlow id="_7" sourceRef="_2" targetRef="_3"/>
+    <sequenceFlow id="_8" sourceRef="_3" targetRef="_4"/>
+    <sequenceFlow id="_9" sourceRef="_4" targetRef="_5"/>
+    <sequenceFlow id="_10" sourceRef="_5" targetRef="_6"/>
   </process>
   <bpmndi:BPMNDiagram documentation="background=#000000;count=1;horizontalcount=1;orientation=0;width=842.4;height=1195.2;imageableWidth=832.4;imageableHeight=1185.2;imageableX=5.0;imageableY=5.0" id="Diagram-_1" name="New Diagram">
     <bpmndi:BPMNPlane bpmnElement="withdraw">
